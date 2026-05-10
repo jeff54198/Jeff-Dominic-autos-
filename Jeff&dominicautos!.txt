@@ -1,0 +1,306 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeff & Dominic Autos</title><style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f0f0f;
+    color: white;
+  }
+
+  header {
+    background: black;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid yellow;
+  }
+
+  header h1 { color: yellow; margin: 0; }
+
+  nav a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+  }
+
+  nav a:hover { color: yellow; }
+
+  .hero {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(90deg, black, #001f3f);
+  }
+
+  .hero h2 { font-size: 40px; color: yellow; }
+
+  section { padding: 40px 20px; }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  input, select {
+    padding: 10px;
+    background: #111;
+    border: 1px solid #333;
+    color: white;
+  }
+
+  .cars {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .car-card {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #333;
+  }
+
+  .car-card h3 { color: yellow; }
+  .tag { color: #00bfff; font-size: 14px; }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    background: black;
+    border-top: 2px solid yellow;
+  }
+</style></head><body><header>
+  <h1>Jeff & Dominic Autos</h1>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#shop">Shop</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header><section class="hero" id="home">
+  <h2>Find Your Dream Car</h2>
+</section><section id="admin" style="background:#111; border-top:2px solid yellow; border-bottom:2px solid yellow;">
+  <p style="color:#ccc;">Admin access only. Customers do not need accounts to browse vehicles.</p>
+  <h2>Admin Panel</h2>  <div class="controls">
+    <input type="text" id="adminUser" placeholder="Username">
+    <input type="password" id="adminPass" placeholder="Password">
+    <button onclick="loginAdmin()">Login</button>
+  </div>  <div id="adminDashboard" style="display:none; margin-top:20px;">
+    <h3>Upload New Vehicle</h3><div class="controls">
+  <input type="text" id="newCarName" placeholder="Car Name">
+  <input type="text" id="newCarType" placeholder="Type">
+  <input type="number" id="newCarYear" placeholder="Year">
+  <input type="number" id="newCarPrice" placeholder="Price">
+</div>
+
+<input type="file" id="newCarImage" accept="image/*">
+<br><br>
+<button onclick="addVehicle()">Add Vehicle</button>
+
+  </div>
+</section><section id="shop">
+  <h2>Shop Cars</h2>  <div class="controls">
+    <input type="text" id="search" placeholder="Search cars..." onkeyup="filterCars()">
+    <select id="filter" onchange="filterCars()">
+      <option value="all">All Types</option>
+      <option value="sports">Sports</option>
+      <option value="luxury">Luxury</option>
+      <option value="bike">Bike</option>
+      <option value="performance">Performance</option>
+    </select>
+  </div>  <div class="cars" id="carList"></div>
+</section><section id="about">
+  <h2>About Us</h2>
+  <p>Premium cars and bikes updated in real-time.</p>
+</section><section id="booking">
+  <h2>Book a Vehicle</h2>  <div style="margin-bottom:30px;">
+    <h3>Upload Car Photos</h3>
+    <input type="file" id="carImages" accept="image/*" multiple onchange="previewImages()">
+    <div id="imagePreview" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;"></div>
+  </div>  <div class="controls">
+    <input type="text" id="customerName" placeholder="Full Name">
+    <input type="email" id="customerEmail" placeholder="Email Address">
+    <select id="carSelect">
+      <option>BMW M4</option>
+      <option>Mercedes C-Class</option>
+      <option>Audi RS7</option>
+      <option>Yamaha R1</option>
+    </select>
+  </div><button onclick="contactDealer()">Contact Dealer</button>
+
+  <div style="margin-top:20px;">
+    <h3>Secure Payment</h3>
+    <p>Connect Stripe or PayPal to accept deposits online.</p><a href="https://stripe.com" target="_blank">
+  <button>Connect Stripe</button>
+</a>
+
+<a href="https://paypal.com" target="_blank">
+  <button>Connect PayPal</button>
+</a>
+
+  </div>
+</section><section id="contact">
+  <h2>Contact</h2>
+  <input type="text" placeholder="Your Name">
+  <input type="email" placeholder="Email">
+  <button onclick="alert('Message sent')">Send</button>
+</section><footer>
+  <p>©️ 2026 Jeff & Dominic Autos</p>
+</footer><!-- Firebase SDK --><script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "XXXX",
+    appId: "XXXX"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let carsData = [];
+
+  async function loadCars() {
+    const querySnapshot = await getDocs(collection(db, "cars"));
+    carsData = [];
+
+    querySnapshot.forEach((doc) => {
+      carsData.push(doc.data());
+    });
+
+    renderCars(carsData);
+
+function previewImages(){
+  const preview = document.getElementById("imagePreview");
+  preview.innerHTML = "";
+
+  const files = document.getElementById("carImages").files;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.style.width = "120px";
+      img.style.height = "80px";
+      img.style.objectFit = "cover";
+      img.style.borderRadius = "8px";
+      img.style.border = "2px solid yellow";
+      preview.appendChild(img);
+    }
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function contactDealer(){
+  const name = document.getElementById("customerName").value;
+  const email = document.getElementById("customerEmail").value;
+  const car = document.getElementById("carSelect").value;
+
+  if(!name || !email){
+    alert("Please fill in your details.");
+    return;
+  }
+
+  const subject = encodeURIComponent("Vehicle Inquiry - " + car);
+  const body = encodeURIComponent(
+    `Hello Jeff & Dominic Autos,%0D%0A%0D%0A` +
+    `My name is ${name}. I am interested in the ${car}.%0D%0A` +
+    `Please contact me at: ${email}%0D%0A%0D%0AThank you.`
+  );
+
+  window.location.href = `mailto:Robertjeff521@gmail.com?subject=${subject}&body=${body}`;
+}
+  }
+
+  function renderCars(cars) {
+    const list = document.getElementById("carList");
+    list.innerHTML = "";
+
+    cars.forEach(car => {
+      list.innerHTML += `
+        <div class="car-card" data-type="${car.type}">
+          ${car.image ? `<img src="${car.image}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; margin-bottom:10px;">` : ''}
+          <h3>${car.name}</h3>
+          <p class="tag">${car.type} • ${car.year}</p>
+          <p>$${car.price}</p>
+        </div>
+      `;
+    });
+  }
+
+  function loginAdmin(){
+  const user = document.getElementById("adminUser").value;
+  const pass = document.getElementById("adminPass").value;
+
+  if(user === "admin" && pass === "dealer123"){
+    document.getElementById("adminDashboard").style.display = "block";
+    alert("Admin login successful");
+  } else {
+    alert("Invalid login details");
+  }
+}
+
+function addVehicle(){
+  const name = document.getElementById("newCarName").value;
+  const type = document.getElementById("newCarType").value;
+  const year = document.getElementById("newCarYear").value;
+  const price = document.getElementById("newCarPrice").value;
+  const imageFile = document.getElementById("newCarImage").files[0];
+
+  if(!name || !type || !year || !price){
+    alert("Please fill all vehicle fields.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+    carsData.push({
+      name:name,
+      type:type,
+      year:year,
+      price:price,
+      image:e.target.result
+    });
+
+    renderCars(carsData);
+    alert("Vehicle added successfully");
+  }
+
+  if(imageFile){
+    reader.readAsDataURL(imageFile);
+  } else {
+    carsData.push({name,type,year,price});
+    renderCars(carsData);
+  }
+}
+
+window.filterCars = function () {
+    let search = document.getElementById("search").value.toLowerCase();
+    let filter = document.getElementById("filter").value;
+
+    let filtered = carsData.filter(car => {
+      let matchSearch = car.name.toLowerCase().includes(search);
+      let matchFilter = filter === "all" || car.type === filter;
+      return matchSearch && matchFilter;
+    });
+
+    renderCars(filtered);
+  }
+
+  loadCars();
+</script></body>
+</html>
